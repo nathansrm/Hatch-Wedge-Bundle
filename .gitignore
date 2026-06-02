@@ -42,3 +42,5 @@ yarn-error.log*
 next-env.d.ts
 
 .source/
+# bare .env must never be committed (Hatch: real keys go here)
+.env
