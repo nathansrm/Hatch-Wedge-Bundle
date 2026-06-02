@@ -48,7 +48,6 @@ export default function OrganizationSettingsPage() {
         name: organization?.name || "",
         image: organization?.image || null,
       });
-      setLogoUrl(organization?.image || "");
     }
   }, [organization, form]);
 

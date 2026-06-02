@@ -495,8 +495,6 @@ class StripeWebhookHandler {
 
 async function handler(req: NextRequest) {
   if (req.method === "POST") {
-    let data;
-    let eventType;
     // Signature verification is MANDATORY. Fail closed if the secret is not
     // configured — never trust an unverified request body (Hatch hardening:
     // the previous fail-open path let forged events grant credits/plans).
@@ -525,8 +523,8 @@ async function handler(req: NextRequest) {
       );
     }
     // Extract the object from the event.
-    data = event.data;
-    eventType = event.type;
+    const data = event.data;
+    const eventType = event.type;
 
     const handler = new StripeWebhookHandler(data, eventType);
 

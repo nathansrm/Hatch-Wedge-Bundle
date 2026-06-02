@@ -22,6 +22,9 @@ COPY . .
 
 RUN pnpm install --frozen-lockfile
 
+RUN chown -R node:node /app /entrypoint-dev.sh
+USER node
+
 EXPOSE 3000 8288 3001
 
 ENTRYPOINT ["/entrypoint-dev.sh"]

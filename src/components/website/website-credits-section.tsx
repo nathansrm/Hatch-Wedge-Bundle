@@ -16,7 +16,7 @@ import {
   Coins,
   Zap,
   Crown,
-  Image,
+  Image as ImageIcon,
   Video,
   LucideIcon,
   Loader2,
@@ -138,41 +138,46 @@ const CreditPackageCard = ({
   );
 };
 
+type CreditTypeSectionProps = {
+  creditType: CreditType;
+  title: string;
+  description: string;
+  icon: LucideIcon;
+  selectedProvider: PlanProvider;
+};
+
+const CreditTypeSection = ({
+  creditType,
+  title,
+  description,
+  icon: Icon,
+  selectedProvider,
+}: CreditTypeSectionProps) => (
+  <div className="flex flex-col gap-8">
+    <div className="text-center">
+      <div className="flex items-center justify-center gap-3 mb-4">
+        <Icon className="h-8 w-8 text-primary" />
+        <h3 className="text-2xl font-bold">{title}</h3>
+      </div>
+      <p className="text-muted-foreground max-w-2xl mx-auto">{description}</p>
+    </div>
+
+    <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+      {creditPackages.map((pkg) => (
+        <CreditPackageCard
+          key={`${creditType}-${pkg.id}`}
+          creditType={creditType}
+          pkg={pkg}
+          selectedProvider={selectedProvider}
+        />
+      ))}
+    </div>
+  </div>
+);
+
 export default function WebsiteCreditsSection() {
   const [selectedProvider] = useState<PlanProvider>(PlanProvider.STRIPE);
   const { organization } = useOrganization();
-  const CreditTypeSection = ({
-    creditType,
-    title,
-    description,
-    icon: Icon,
-  }: {
-    creditType: CreditType;
-    title: string;
-    description: string;
-    icon: LucideIcon;
-  }) => (
-    <div className="flex flex-col gap-8">
-      <div className="text-center">
-        <div className="flex items-center justify-center gap-3 mb-4">
-          <Icon className="h-8 w-8 text-primary" />
-          <h3 className="text-2xl font-bold">{title}</h3>
-        </div>
-        <p className="text-muted-foreground max-w-2xl mx-auto">{description}</p>
-      </div>
-
-      <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-        {creditPackages.map((pkg) => (
-          <CreditPackageCard
-            key={`${creditType}-${pkg.id}`}
-            creditType={creditType}
-            pkg={pkg}
-            selectedProvider={selectedProvider}
-          />
-        ))}
-      </div>
-    </div>
-  );
 
   return (
     <section
@@ -196,7 +201,7 @@ export default function WebsiteCreditsSection() {
               value="image_generation"
               className="flex items-center gap-2"
             >
-              <Image className="h-4 w-4" />
+              <ImageIcon className="h-4 w-4" />
               Image AI
             </TabsTrigger>
             <TabsTrigger
@@ -213,7 +218,8 @@ export default function WebsiteCreditsSection() {
               creditType="image_generation"
               title="Image Generation Credits"
               description="Create stunning AI-generated images for your projects, marketing materials, and creative content."
-              icon={Image}
+              icon={ImageIcon}
+              selectedProvider={selectedProvider}
             />
           </TabsContent>
 
@@ -223,6 +229,7 @@ export default function WebsiteCreditsSection() {
               title="Video Generation Credits"
               description="Generate engaging AI videos for social media, advertisements, and video content creation."
               icon={Video}
+              selectedProvider={selectedProvider}
             />
           </TabsContent>
         </Tabs>

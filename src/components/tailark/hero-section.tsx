@@ -6,6 +6,8 @@ import Image from "next/image";
 import { TextEffect } from "@/components/ui/text-effect";
 import { AnimatedGroup } from "@/components/ui/animated-group";
 
+/* eslint-disable @next/next/no-img-element */
+
 const transitionVariants = {
   item: {
     hidden: {

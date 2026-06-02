@@ -2,7 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import { AnimatePresence, motion, MotionProps } from "motion/react";
-import { useEffect, useRef, useState } from "react";
+import { type RefObject, useEffect, useRef, useState } from "react";
 
 type CharacterSet = string[] | readonly string[];
 
@@ -42,10 +42,6 @@ export default function HyperText({
   characterSet = DEFAULT_CHARACTER_SET,
   ...props
 }: HyperTextProps) {
-  const MotionComponent = motion.create(Component, {
-    forwardMotionProps: true,
-  });
-
   const [displayText, setDisplayText] = useState<string[]>(() =>
     children.split(""),
   );
@@ -116,13 +112,7 @@ export default function HyperText({
     return () => clearInterval(interval);
   }, [children, duration, isAnimating, characterSet]);
 
-  return (
-    <MotionComponent
-      ref={elementRef}
-      className={cn("overflow-hidden py-2 text-4xl font-bold", className)}
-      onMouseEnter={handleAnimationTrigger}
-      {...props}
-    >
+  const content = (
       <AnimatePresence>
         {displayText.map((letter, index) => (
           <motion.span
@@ -133,6 +123,29 @@ export default function HyperText({
           </motion.span>
         ))}
       </AnimatePresence>
-    </MotionComponent>
+  );
+
+  if (Component === "span") {
+    return (
+      <motion.span
+        ref={elementRef as RefObject<HTMLSpanElement | null>}
+        className={cn("overflow-hidden py-2 text-4xl font-bold", className)}
+        onMouseEnter={handleAnimationTrigger}
+        {...props}
+      >
+        {content}
+      </motion.span>
+    );
+  }
+
+  return (
+    <motion.div
+      ref={elementRef as RefObject<HTMLDivElement | null>}
+      className={cn("overflow-hidden py-2 text-4xl font-bold", className)}
+      onMouseEnter={handleAnimationTrigger}
+      {...props}
+    >
+      {content}
+    </motion.div>
   );
 }

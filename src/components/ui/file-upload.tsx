@@ -270,6 +270,7 @@ interface FileUploadContextValue {
   disabled: boolean;
   dir: Direction;
   inputRef: React.RefObject<HTMLInputElement | null>;
+  onFilesChange: (files: File[]) => void;
   urlCache: WeakMap<File, string>;
 }
 
@@ -593,9 +594,10 @@ function FileUploadRoot(props: FileUploadRootProps) {
       dir,
       disabled,
       inputRef,
+      onFilesChange,
       urlCache,
     }),
-    [dropzoneId, inputId, listId, labelId, dir, disabled, urlCache]
+    [dropzoneId, inputId, listId, labelId, dir, disabled, onFilesChange, urlCache]
   );
 
   const RootPrimitive = asChild ? Slot : "div";
@@ -731,19 +733,9 @@ function FileUploadDropzone(props: FileUploadDropzoneProps) {
       event.preventDefault();
       store.dispatch({ type: "SET_DRAG_OVER", dragOver: false });
 
-      const files = Array.from(event.dataTransfer.files);
-      const inputElement = context.inputRef.current;
-      if (!inputElement) return;
-
-      const dataTransfer = new DataTransfer();
-      for (const file of files) {
-        dataTransfer.items.add(file);
-      }
-
-      inputElement.files = dataTransfer.files;
-      inputElement.dispatchEvent(new Event("change", { bubbles: true }));
+      context.onFilesChange(Array.from(event.dataTransfer.files));
     },
-    [store, context.inputRef, onDropProp]
+    [store, context, onDropProp]
   );
 
   const onPaste = React.useCallback(
@@ -771,18 +763,9 @@ function FileUploadDropzone(props: FileUploadDropzoneProps) {
 
       if (files.length === 0) return;
 
-      const inputElement = context.inputRef.current;
-      if (!inputElement) return;
-
-      const dataTransfer = new DataTransfer();
-      for (const file of files) {
-        dataTransfer.items.add(file);
-      }
-
-      inputElement.files = dataTransfer.files;
-      inputElement.dispatchEvent(new Event("change", { bubbles: true }));
+      context.onFilesChange(files);
     },
-    [store, context.inputRef, onPasteProp]
+    [store, context, onPasteProp]
   );
 
   const onKeyDown = React.useCallback(

@@ -5,7 +5,7 @@ import { countries } from "countries-list";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
@@ -91,7 +91,10 @@ export function BillingForm({ callbackUrl }: BillingFormProps) {
     },
   });
 
-  const watchIsBusinessCustomer = form.watch("isBusinessCustomer");
+  const watchIsBusinessCustomer = useWatch({
+    control: form.control,
+    name: "isBusinessCustomer",
+  });
 
   function onSubmit(values: BillingFormValues) {
     setIsSubmitting(true);

@@ -115,13 +115,11 @@ function AnimatedGroup({
   const containerVariants = variants?.container || selectedVariants.container;
   const itemVariants = variants?.item || selectedVariants.item;
 
-  const MotionChild = React.useMemo(
-    () => motion.create(asChild as string),
-    [asChild]
-  );
+  const MotionChild = asChild === "span" ? motion.span : motion.div;
+  const MotionContainer = as === "span" ? motion.span : motion.div;
 
   return (
-    <motion.div
+    <MotionContainer
       initial="hidden"
       animate="visible"
       variants={containerVariants}
@@ -132,7 +130,7 @@ function AnimatedGroup({
           {child}
         </MotionChild>
       ))}
-    </motion.div>
+    </MotionContainer>
   );
 }
 

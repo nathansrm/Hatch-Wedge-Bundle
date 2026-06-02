@@ -17,6 +17,26 @@ const cancelParams = subscribeParams.extend({
 
 type CancelParams = z.infer<typeof cancelParams>;
 
+async function getCancelPageData(searchParams: Promise<CancelParams>) {
+  const { provider, codename, type, sessionId } = await searchParams;
+
+  cancelParams.parse({
+    codename,
+    type,
+    provider,
+    sessionId,
+  });
+
+  const plan = await db
+    .select()
+    .from(plans)
+    .where(eq(plans.codename, codename))
+    .limit(1)
+    .then((res) => res[0]);
+
+  return { provider, codename, type, plan };
+}
+
 export default async function SubscribeCancelPage({
   searchParams,
 }: {
@@ -28,56 +48,43 @@ export default async function SubscribeCancelPage({
     return redirect("/auth/login");
   }
 
-  try {
-    const { provider, codename, type, sessionId } = await searchParams;
-    
-    // Validate the parameters
-    cancelParams.parse({
-      codename,
-      type,
-      provider,
-      sessionId,
-    });
-    
-    // Fetch plan details (optional - just for displaying plan name)
-    const plan = await db
-      .select()
-      .from(plans)
-      .where(eq(plans.codename, codename))
-      .limit(1)
-      .then((res) => res[0]);
+  const { provider, codename, type, plan } = await getCancelPageData(
+    searchParams
+  ).catch((error) => {
+    console.error("Error in subscription cancel page:", error);
+    redirect("/app");
+  });
 
-    return (
-      <div className="container max-w-lg mx-auto py-12">
-        <Card className="p-6">
-          <div className="flex flex-col items-center text-center space-y-4">
-            <XCircle className="h-12 w-12 text-amber-500" />
-            <h1 className="text-2xl font-bold">Subscription Cancelled</h1>
-            <div>
-              <p>
-                You have cancelled the checkout process for {plan ? `the ${plan.name} plan` : 'your subscription'}.
-              </p>
-              <p className="text-muted-foreground mt-1">
-                No charges have been made to your account.
-              </p>
-            </div>
-
-            <div className="flex flex-row gap-2 items-center mt-4">
-              <Button asChild>
-                <Link href={`/app/subscribe?codename=${codename}&type=${type}&provider=${provider}`}>
-                  Try Again
-                </Link>
-              </Button>
-              <Button variant="outline" asChild>
-                <Link href="/app">Back to Dashboard</Link>
-              </Button>
-            </div>
+  return (
+    <div className="container max-w-lg mx-auto py-12">
+      <Card className="p-6">
+        <div className="flex flex-col items-center text-center space-y-4">
+          <XCircle className="h-12 w-12 text-amber-500" />
+          <h1 className="text-2xl font-bold">Subscription Cancelled</h1>
+          <div>
+            <p>
+              You have cancelled the checkout process for{" "}
+              {plan ? `the ${plan.name} plan` : "your subscription"}.
+            </p>
+            <p className="text-muted-foreground mt-1">
+              No charges have been made to your account.
+            </p>
           </div>
-        </Card>
-      </div>
-    );
-  } catch (error) {
-    console.error('Error in subscription cancel page:', error);
-    return redirect('/app');
-  }
-} 
+
+          <div className="flex flex-row gap-2 items-center mt-4">
+            <Button asChild>
+              <Link
+                href={`/app/subscribe?codename=${codename}&type=${type}&provider=${provider}`}
+              >
+                Try Again
+              </Link>
+            </Button>
+            <Button variant="outline" asChild>
+              <Link href="/app">Back to Dashboard</Link>
+            </Button>
+          </div>
+        </div>
+      </Card>
+    </div>
+  );
+}
