@@ -497,33 +497,36 @@ async function handler(req: NextRequest) {
   if (req.method === "POST") {
     let data;
     let eventType;
-    // Check if webhook signing is configured.
+    // Signature verification is MANDATORY. Fail closed if the secret is not
+    // configured — never trust an unverified request body (Hatch hardening:
+    // the previous fail-open path let forged events grant credits/plans).
     const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-    if (webhookSecret) {
-      // Retrieve the event by verifying the signature using the raw body and secret.
-      let event: Stripe.Event;
-      const signature = req.headers.get("stripe-signature") as string;
-
-      try {
-        const body = await req.text();
-        event = getStripe().webhooks.constructEvent(body, signature, webhookSecret);
-      } catch (err) {
-        console.error(`⚠️ Webhook signature verification failed.`, err);
-        return NextResponse.json({
-          received: true,
-          error: "Webhook signature verification failed",
-        });
-      }
-      // Extract the object from the event.
-      data = event.data;
-      eventType = event.type;
-    } else {
-      // Webhook signing is recommended, but if the secret is not configured in `config.js`,
-      // retrieve the event data directly from the request body.
-      const body = await req.json();
-      data = body.data;
-      eventType = body.type;
+    if (!webhookSecret) {
+      console.error(
+        "STRIPE_WEBHOOK_SECRET is not set — refusing to process Stripe webhook."
+      );
+      return NextResponse.json(
+        { received: false, error: "Webhook secret not configured" },
+        { status: 500 }
+      );
     }
+
+    // Retrieve the event by verifying the signature using the raw body and secret.
+    let event: Stripe.Event;
+    const signature = req.headers.get("stripe-signature") as string;
+    try {
+      const body = await req.text();
+      event = getStripe().webhooks.constructEvent(body, signature, webhookSecret);
+    } catch (err) {
+      console.error(`⚠️ Webhook signature verification failed.`, err);
+      return NextResponse.json(
+        { received: false, error: "Webhook signature verification failed" },
+        { status: 400 }
+      );
+    }
+    // Extract the object from the event.
+    data = event.data;
+    eventType = event.type;
 
     const handler = new StripeWebhookHandler(data, eventType);
 

@@ -18,6 +18,7 @@
 | 2026-06-02 | `.env` (untracked) | `git rm --cached .env` — stopped tracking; local file preserved | Same as above. Real keys live here now and must never be committed. | If upstream re-adds `.env` to the tree, re-run `git rm --cached .env`. |
 | 2026-06-02 | `.agent/` (deleted) | Removed entire dir — byte-mirror of `.claude/skills/` with no sync (OPEN-ISSUES #6) | `.claude/` is the canonical superset (also has agents/commands/settings). Mirror would drift. | If upstream re-adds `.agent/`, re-delete: `git rm -r .agent`. |
 | 2026-06-02 | `.cursor/rules/core-rules.mdc`, `.windsurf/rules/core-rules.md` (deleted) | Removed the "contemplator" persona prompt (10,000-char monologue, OPEN-ISSUES #7) | Pure persona noise; fights Nathan's terse global style; zero engineering value. Other Cursor/Windsurf rules kept. | If upstream re-adds these, re-delete. Do NOT re-delete the other rule files. |
+| 2026-06-02 | `src/app/api/webhooks/stripe/route.ts` | Removed fail-OPEN `else` branch; fail CLOSED — return 500 if `STRIPE_WEBHOOK_SECRET` missing, 400 on bad signature (was 200) (OPEN-ISSUES #5) | Old code processed unverified request bodies when the secret was unset → forged events could grant credits/plans. Validator PASS, High confidence. | If upstream restores the unverified-body `else` branch, re-apply the fail-closed guard. |
 
 ---
 
@@ -25,8 +26,8 @@
 
 These are known upstream-file edits coming on the roadmap — pre-recorded so we don't forget to log them when they land:
 
-- `docker/prod/Dockerfile` — fix secret-baking (OPEN-ISSUES #1, P0)
-- Stripe webhook handler — fail-closed on missing `STRIPE_WEBHOOK_SECRET` (OPEN-ISSUES #5)
+- `docker/prod/Dockerfile` — secret-baking fix (OPEN-ISSUES #1) — **DEFERRED to deploy-prep**: multi-stage build means the runtime image doesn't carry `.env`; the proper fix (BuildKit `--mount=type=secret`) changes the build invocation and belongs with deploy-target setup (Level 3). Not a pre-deploy blocker.
+- ~~Stripe webhook handler — fail-closed~~ ✅ DONE 2026-06-02 (see Edits table above)
 - `src/db/index.ts` — driver swap `neon-http` → `neon-serverless`/`pg` (Path C RLS prerequisite)
 - `src/lib/auth/` org wrapper — inject `SET LOCAL app.organization_id` (Path C RLS)
 - `src/lib/credits/index.ts` (`deductCredits`) — one line to dispatch the meter-event Inngest event (the rest of the meter bridge is new files)
