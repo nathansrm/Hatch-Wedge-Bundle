@@ -104,7 +104,25 @@ No `test` command yet — adding a Vitest floor is OPEN-ISSUES #2 and is what un
 - **Metered billing is NOT wired.** Slot-in point is `deductCredits()` → fire an Inngest event → new Inngest fn calls `stripe.billing.meterEvents.create()`. ~90 LOC across 4 new-ish files. Create the Stripe Billing Meters in the dashboard first.
 - **Credits ledger already exists** (`credit_transactions`, idempotency via `paymentId`, slab pricing). Don't rebuild billing — bridge it.
 - **Super-admin already has full org/plan/coupon/user CRUD + recharts stats** — the operator console is largely free.
-- **Repo AI config is neutralized by this profile.** IndieKit ships `.claude/`, `.agent/`, `.cursor/`, `.windsurf/` configs — including a "minimum 10,000-character monologue" rule (OPEN-ISSUES #7). It does NOT govern here. Nathan's global `~/.claude/CLAUDE.md` (terse, no hedging) + this profile are authoritative. `.agent/` is a stale byte-mirror of `.claude/` — slated for deletion (#6).
+- **Repo AI config is neutralized by this profile.** IndieKit shipped `.claude/`, `.agent/`, `.cursor/`, `.windsurf/` configs — including a "minimum 10,000-character monologue" persona rule. It does NOT govern here; Nathan's global `~/.claude/CLAUDE.md` (terse, no hedging) + this profile are authoritative. Cleaned 2026-06-02: `.agent/` mirror deleted (`.claude/` is canonical), monologue persona files deleted from `.cursor/` + `.windsurf/` (other rule files kept).
+
+## Repo-Native Skills (IndieKit) — use them
+
+IndieKit ships a repo-specific toolkit in `.claude/` (27 skills, 8 agents, 2 commands) encoding its own conventions. **Default to the matching skill before hand-writing IndieKit-pattern code** — it's faster and keeps us on-convention, which keeps upstream merges clean. Mapped to this project's roadmap:
+
+| Work | Skill / agent |
+|---|---|
+| Meter-events bridge · credit types/usage | `credits-handler`, `stripe-handler` |
+| Async meter posting · background jobs · scheduled wedges | `inngest-handler`, `cron-job-handler` |
+| Path C RLS · schema · Drizzle migrations | `db-handler` + `db-architect` agent |
+| Auth wrappers / RLS injection point | `auth-handler` + `security-manager` agent |
+| Per-client pricing · plan quotas | `plans-handler` |
+| Onboarding pricing-config UI · CRUD | `form-creator`, `ui-handler` |
+| Env / secret handling (Dockerfile fix) | `env-handler` |
+| Dashboard reskin / marketing | `theme-handler`, `page-builder`, `ui-handler` |
+| Transactional emails | `email-handler` |
+
+Full list in `.claude/skills/`. Agents in `.claude/agents/`. Commands: `/add-feature`, `/bootstrap`. **Every brief that touches an IndieKit pattern should name the skill the builder must use.**
 
 ## Off-Limits
 
@@ -193,4 +211,8 @@ Claude's role on this repo: planning, scoping, briefing, design judgment.
 - Implementation is delegated — write the brief, then dispatch.
 - For full implementation, use `/codex:dispatch` from this repo or hand off
   to CodexApp via `/codexapp-handoff`.
+- **IndieKit's repo skills auto-load here** (project `.claude/skills/`). Invoke
+  the matching one (e.g. `/credits-handler`, `/inngest-handler`, `/db-handler`)
+  before scoping a brief or hand-coding an IndieKit pattern — and name it in the
+  brief so the builder uses it too.
 - Self-critique before output. State High/Medium/Low confidence and why.
