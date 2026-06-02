@@ -1,7 +1,11 @@
+import { randomUUID } from "node:crypto";
+
 import { db } from "@/db";
 import { CreditTransaction, creditTransactions } from "@/db/schema/credits";
 import { eq } from "drizzle-orm";
 import { type CreditType } from "./credits";
+import { meterEventReport } from "@/lib/inngest/functions/report-meter-event";
+import { inngest } from "@/lib/inngest/client";
 import { organizations } from "@/db/schema/organization";
 
 type CreditRecord = {
@@ -261,7 +265,7 @@ export async function deductCredits(
     );
   }
 
-  return await addCreditTransaction(
+  const result = await addCreditTransaction(
     organizationId,
     creditType,
     "debit",
@@ -269,4 +273,19 @@ export async function deductCredits(
     null,
     metadata
   );
+
+  try {
+    await inngest.send(
+      meterEventReport.create({
+        organizationId,
+        creditType,
+        value: amount,
+        identifier: randomUUID(),
+      })
+    );
+  } catch (error) {
+    console.error("Failed to dispatch meter event for debit:", error);
+  }
+
+  return result;
 }
