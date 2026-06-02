@@ -1,11 +1,9 @@
-# Install deps and compile the Next.js app (parity with `pnpm build` / Dockerfile builder).
-# Lint is intentionally omitted until the ESLint backlog is cleared (pnpm lint fails today).
+# Install deps, lint, audit high-severity vulnerabilities, and compile the Next.js app.
 #
-# Push/PR CI runs only on the upstream Indie-Kit org repos. Forks and customer clones
-# skip the build job automatically (workflow_dispatch still works everywhere).
-#
-# Actions use Node.js 24-capable majors: actions/checkout@v6, actions/setup-node@v6, pnpm/action-setup@v5.
-# Optional: add repository/environment Variables and Secrets (CI_* names below) instead of placeholders.
+# CI is intentionally enabled for this fork so PRs against the `b2b` foundation
+# branch produce real review evidence. Actions are pinned to immutable SHAs.
+# Optional: add repository/environment Variables and Secrets (CI_* names below)
+# instead of placeholders.
 name: CI
 
 on:
@@ -24,7 +22,6 @@ permissions:
 
 jobs:
   build:
-    if: github.repository_owner == 'Indie-Kit'
     runs-on: ubuntu-latest
     env:
       NEXT_TELEMETRY_DISABLED: "1"
@@ -70,16 +67,21 @@ jobs:
       SUPER_ADMIN_EMAILS: ${{ vars.CI_SUPER_ADMIN_EMAILS || 'admin@example.com' }}
 
     steps:
-      - uses: actions/checkout@v6
+      # actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
 
-      - uses: pnpm/action-setup@v5
+      # pnpm/action-setup@v5
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320
         with:
           version: 10.15.1
 
-      - uses: actions/setup-node@v6
+      # actions/setup-node@v6
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
         with:
           node-version: "24"
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm audit --audit-level high
       - run: pnpm build
