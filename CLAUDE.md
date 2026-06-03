@@ -3,7 +3,8 @@ profile_version: 1
 profile_generated_by: project-profile-skill
 profile_generated: 2026-06-02
 profile_kind: full
-readiness_level: 1
+readiness_level: 3
+profile_last_synced: 2026-06-02
 
 # --- Repo identity ---
 project_name: "Hatch Theory Metered Offer (foundation)"
@@ -18,7 +19,7 @@ stack:
   language: "TypeScript"
   framework: "Next.js (App Router, Turbopack)"
   backend: "Auth.js v5 + Drizzle ORM on Neon (Postgres) · Inngest · Stripe usage-based billing"
-  test_runner: "(none yet — Vitest planned, OPEN-ISSUES #2)"
+  test_runner: "Vitest 4 (pnpm test / vitest run) — meter-bridge unit floor; coverage expanding (OPEN-ISSUES #2)"
   package_manager: "pnpm"
 
 # --- Commands (every entry verified in package.json) ---
@@ -31,22 +32,36 @@ commands:
   script: "pnpm script"
 
 # --- Delivery-spine readiness ---
-review_ready: false      # Level 1 — local edits + scoped review only, no PRs
-ship_ready: false        # Level 2+ (needs test floor first)
-deploy_ready: false      # Level 3 only (not deployed anywhere yet)
+review_ready: true       # PR/review path configured (CI: lint + audit + build)
+ship_ready: true         # lint/test/audit/build gates verified (Vitest floor in place)
+deploy_ready: true       # Level 3 — Vercel target, env source, rollback, /api/health smoke configured
+
+deploy:
+  platform: "Vercel"
+  project: "nathansrm-8920s-projects/hatch-wedge-bundle"
+  target: "production"
+  production_url: "https://hatch-wedge-bundle.vercel.app"
+  trigger: "Vercel Git integration on merge/push to b2b; manual CLI deploy allowed during /land-and-deploy"
+  ci_workflow: ".github/workflows/ci.yml"
+  health_check: "https://hatch-wedge-bundle.vercel.app/api/health"
+  env_source: "Vercel project environment variables; names mirrored in .env.example; values are not committed"
+  rollback: "vercel rollback, or promote a previous ready deployment from Vercel dashboard/CLI"
+  approval: "Explicit Nathan approval before production deploy, rollback, env changes, or real billing activation"
 
 # --- Approval gates ---
 required_approvals:
   - "DB schema / Drizzle migration / RLS / auth-wrapper changes: explicit Nathan approval (multi-tenant isolation is load-bearing)"
   - "Stripe billing / meter / Plan-quota config changes: explicit Nathan approval"
   - "Editing any IndieKit upstream file in place (vs adding a new file): approval + log the change in HATCH-CHANGES.md"
-  - "Production deploy: explicit Nathan approval (N/A at Level 1)"
+  - "Production deploy, rollback, env changes, and real billing activation: explicit Nathan approval"
 
 risky_surfaces:
   - "src/db/index.ts  # Neon driver — Path C driver swap lands here; upstream conflict point"
   - "src/lib/auth/  # withAuthRequired / withOrganizationAuthRequired / withSuperAdminAuthRequired — RLS injection point"
   - "Stripe webhook handler  # security-critical (OPEN-ISSUES #5, fail-closed)"
   - "docker/prod/Dockerfile  # secret-baking risk (OPEN-ISSUES #1, P0)"
+  - ".github/workflows/ci.yml  # CI and action-pin delivery gate"
+  - ".env.example / Vercel env vars  # runtime config contract; values must never be committed"
 
 # --- Boundaries ---
 off_limits:
@@ -58,7 +73,7 @@ off_limits:
 
 # Hatch Theory Metered Offer — Foundation Repo
 
-IndieKit Full Kit (multi-tenant `b2b` variant) — the SaaS foundation for the **Hatch Theory Metered Offer**: a free-to-install client portal for trades where automation toggles ("wedges") bill only on a clean verified outcome, at per-client custom pricing. This repo is the data + auth + dashboard layer; the outcome-detection engine is separate. **Concept/prep stage — not deployed, no paying clients yet.**
+IndieKit Full Kit (multi-tenant `b2b` variant) — the SaaS foundation for the **Hatch Theory Metered Offer**: a free-to-install client portal for trades where automation toggles ("wedges") bill only on a clean verified outcome, at per-client custom pricing. This repo is the data + auth + dashboard layer; the outcome-detection engine is separate. **Foundation deployed to Vercel (Level 3); no paying clients yet.**
 
 ## Goal
 
@@ -70,7 +85,7 @@ Prepare and harden the IndieKit foundation so it can host the metered-billing pr
 - Language: TypeScript
 - Backend: Auth.js v5 + Drizzle ORM on Neon (Postgres)
 - Background jobs: Inngest (local dev on port 8288)
-- Billing: Stripe (usage-based metering — bridge not yet wired)
+- Billing: Stripe (usage-based metering — bridge wired through Inngest; Stripe dashboard meter activation separately gated)
 - Email: react-email (dev preview port 3001)
 - Package manager: pnpm
 
@@ -81,11 +96,12 @@ pnpm install
 pnpm dev            # next dev (turbopack) + inngest-cli + email preview, concurrently
 pnpm build          # next build
 pnpm lint           # eslint .
+pnpm audit --audit-level high
 pnpm docker:build   # docker build -f docker/prod/Dockerfile
 pnpm script         # tsx bootstrap runner (scripts/_bootstrap)
 ```
 
-No `test` command yet — adding a Vitest floor is OPEN-ISSUES #2 and is what unlocks safe upstream merges + Level 2.
+Tests: `pnpm test` (Vitest 4) — a meter-bridge unit floor; expand to the auth wrappers + webhook next (OPEN-ISSUES #2). Delivery gates: `pnpm lint`, `pnpm test`, `pnpm audit --audit-level high`, `pnpm build`, CI, Vercel deploy status, and the `/api/health` smoke.
 
 ## Control Plane
 
@@ -101,7 +117,7 @@ No `test` command yet — adding a Vitest floor is OPEN-ISSUES #2 and is what un
 - **Additive over invasive — this protects the update path.** Updates are plain `git merge` from the IndieKit upstream remote. Add *new* files (utils, Inngest fns, RLS migrations, feature pages); avoid editing IndieKit's own files. The few in-place edits we must make get logged in `HATCH-CHANGES.md` (re-apply checklist after a conflicted merge).
 - **Tenant ID is already on every business table** (`organizationId` FK) — Path C RLS is feasible with zero column backfills.
 - **Security is currently app-layer only:** `withAuthRequired` / `withOrganizationAuthRequired` / `withSuperAdminAuthRequired`. Path C adds Postgres RLS as defense layer 2 — swap `drizzle-orm/neon-http` → `neon-serverless`/`pg` for a real session, then `SET LOCAL app.organization_id` in the org wrapper after the membership check. Trigger: before first paying client.
-- **Metered billing is NOT wired.** Slot-in point is `deductCredits()` → fire an Inngest event → new Inngest fn calls `stripe.billing.meterEvents.create()`. ~90 LOC across 4 new-ish files. Create the Stripe Billing Meters in the dashboard first.
+- **Meter-events bridge is wired** (BRIEF-001, commit `02aaa1f`). `deductCredits()` dispatches a typed Inngest event; `reportMeterEventFn` calls `stripe.billing.meterEvents.create()` only when `STRIPE_SECRET_KEY`, a Stripe customer, and a meter mapping all exist (fail-safe no-op otherwise). Create/confirm the Stripe Billing Meters in the dashboard before real billing activation.
 - **Credits ledger already exists** (`credit_transactions`, idempotency via `paymentId`, slab pricing). Don't rebuild billing — bridge it.
 - **Super-admin already has full org/plan/coupon/user CRUD + recharts stats** — the operator console is largely free.
 - **Repo AI config is neutralized by this profile.** IndieKit shipped `.claude/`, `.agent/`, `.cursor/`, `.windsurf/` configs — including a "minimum 10,000-character monologue" persona rule. It does NOT govern here; Nathan's global `~/.claude/CLAUDE.md` (terse, no hedging) + this profile are authoritative. Cleaned 2026-06-02: `.agent/` mirror deleted (`.claude/` is canonical), monologue persona files deleted from `.cursor/` + `.windsurf/` (other rule files kept).
@@ -135,11 +151,21 @@ Full list in `.claude/skills/`. Agents in `.claude/agents/`. Commands: `/add-fea
 - DB schema / Drizzle migration / RLS / auth-wrapper changes — explicit Nathan approval (multi-tenant isolation is load-bearing)
 - Stripe billing / meter / Plan-quota config changes — explicit Nathan approval
 - Editing any IndieKit upstream file in place (vs adding a new file) — approval + log in `HATCH-CHANGES.md`
-- Production deploy — explicit Nathan approval (N/A at Level 1)
+- Production deploy, rollback, env changes, and real billing activation — explicit Nathan approval
+
+## Deploy Contract
+
+- **Platform:** Vercel project `nathansrm-8920s-projects/hatch-wedge-bundle`, target production.
+- **Production URL:** `https://hatch-wedge-bundle.vercel.app`
+- **CI:** `.github/workflows/ci.yml` runs install, `pnpm lint`, high-severity `pnpm audit`, and `pnpm build` on `b2b` PRs/pushes.
+- **Env source:** Vercel environment variables; names mirrored in `.env.example`; values never committed.
+- **Verification:** `GET /api/health` → `{"ok":true,"service":"hatch-wedge-bundle"}`.
+- **Rollback:** `vercel rollback`, or promote a previous ready deployment from the Vercel dashboard/CLI.
+- No production deploy, rollback, env change, or real billing activation without explicit Nathan approval.
 
 ## Active Focus
 
-Use `01 - PROJECTS/PROJECT_STATUS.md` and the Hatch Theory Metered Offer vault hub for current brief state. Do not duplicate the active queue here. Near-term prep order: hygiene (`.env` ✓, drop `.agent/`, strip monologue rule) → P0/P1 security (Dockerfile secrets, webhook fail-closed) → meter-events bridge → Path C RLS (before first paying client).
+Use `01 - PROJECTS/PROJECT_STATUS.md` and the Hatch Theory Metered Offer vault hub for current brief state. Do not duplicate the active queue here. Foundation status: BRIEF-001 (meter bridge), BRIEF-002 (lint baseline), BRIEF-003 (release foundation + Vercel deploy) all shipped, plus the Vitest meter-bridge test floor. Next: Path C RLS before first paying client → Stripe Billing Meter dashboard activation only when Nathan authorizes real billing.
 
 ## Broader Context
 
@@ -167,9 +193,10 @@ Global delivery-spine skills (`/investigate`, `/review`, `/ship`,
 6. **Read PROJECT_STATUS.md** for the current phase before suggesting
    next actions.
 
-At **Level 1**: local edits, investigation, and scoped review are allowed.
-No PRs, no deploys. `/ship` and `/land-and-deploy` must refuse and ask for
-`/project-profile upgrade 2` (PRs) or `upgrade 3` (deploys).
+At **Level 3**: local edits, scoped review, PRs/`/ship`, and Vercel
+`/land-and-deploy` (+ `/canary`, rollback) are allowed — but production
+deploy, rollback, env changes, and real billing activation each require
+explicit Nathan approval at the moment of action.
 
 ---
 
@@ -195,10 +222,10 @@ edits to IndieKit's files are the costliest kind here (they conflict on
 upstream merge) — keep them to the minimum and record them in HATCH-CHANGES.md.
 
 ### Verifiable goals
-Convert vague tasks to concrete success criteria. With no test runner yet,
-"verify" means: `pnpm build` clean, `pnpm lint` clean, and a stated manual
-check for the touched surface. Add a Vitest test alongside any wrapper or
-billing change you make.
+Convert vague tasks to concrete success criteria. "Verify" means: `pnpm lint`
+clean, `pnpm test` green, `pnpm audit --audit-level high` clean, `pnpm build`
+clean, CI when PR-shaped, and a `/api/health` smoke for deploy work. Add a
+Vitest test alongside any wrapper or billing change.
 
 ---
 
@@ -211,6 +238,9 @@ Claude's role on this repo: planning, scoping, briefing, design judgment.
 - Implementation is delegated — write the brief, then dispatch.
 - For full implementation, use `/codex:dispatch` from this repo or hand off
   to CodexApp via `/codexapp-handoff`.
+- `/ship` + `/land-and-deploy` are the Codex/CodexApp lane (Claude doesn't own
+  them). Claude's deploy role: stage the PR + verify, then hand ship/land to
+  Codex — or open the PR via `gh` and checkpoint before the prod merge.
 - **IndieKit's repo skills auto-load here** (project `.claude/skills/`). Invoke
   the matching one (e.g. `/credits-handler`, `/inngest-handler`, `/db-handler`)
   before scoping a brief or hand-coding an IndieKit pattern — and name it in the

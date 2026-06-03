@@ -19,7 +19,7 @@ stack:
   language: "TypeScript"
   framework: "Next.js (App Router, Turbopack)"
   backend: "Auth.js v5 + Drizzle ORM on Neon (Postgres) · Inngest · Stripe usage-based billing"
-  test_runner: "(none yet - Vitest planned; current gates are lint, audit, build, and Vercel health smoke)"
+  test_runner: "Vitest 4 (pnpm test / vitest run) - meter-bridge unit floor; coverage expanding (OPEN-ISSUES #2)"
   package_manager: "pnpm"
 
 # --- Commands (every entry verified in package.json) ---
@@ -28,6 +28,7 @@ commands:
   dev: "pnpm dev"
   build: "pnpm build"
   lint: "pnpm lint"
+  test: "pnpm test"
   audit: "pnpm audit --audit-level high"
   start: "pnpm start"
   docker_build: "pnpm docker:build"
@@ -35,7 +36,7 @@ commands:
 
 # --- Delivery-spine readiness ---
 review_ready: true       # Level 2+ - PR/review path is configured
-ship_ready: true         # Level 2+ - lint/audit/build gates are verified
+ship_ready: true         # Level 2+ - lint/test/audit/build gates are verified (Vitest floor in place)
 deploy_ready: true       # Level 3 - Vercel target, env source, rollback, and smoke target are configured
 
 deploy:
@@ -104,7 +105,7 @@ pnpm docker:build   # docker build -f docker/prod/Dockerfile
 pnpm script         # tsx bootstrap runner (scripts/_bootstrap)
 ```
 
-No `test` command yet - adding a Vitest floor remains OPEN-ISSUES #2. Current delivery gates are `pnpm lint`, `pnpm audit --audit-level high`, `pnpm build`, CI, Vercel deploy status, and `/api/health` smoke.
+Tests: `pnpm test` (Vitest 4) - a meter-bridge unit floor; expand to the auth wrappers + webhook next (OPEN-ISSUES #2). Delivery gates: `pnpm lint`, `pnpm test`, `pnpm audit --audit-level high`, `pnpm build`, CI, Vercel deploy status, and `/api/health` smoke.
 
 ## Control Plane
 
@@ -221,11 +222,10 @@ edits to IndieKit's files are the costliest kind here (they conflict on
 upstream merge) — keep them to the minimum and record them in HATCH-CHANGES.md.
 
 ### Verifiable goals
-Convert vague tasks to concrete success criteria. With no test runner yet,
-"verify" means: `pnpm lint` clean, `pnpm audit --audit-level high` clean,
-`pnpm build` clean, CI when PR-shaped, and a Vercel `/api/health` smoke for
-deploy work. Add a Vitest test alongside any wrapper or billing change once the
-test floor is introduced.
+Convert vague tasks to concrete success criteria. "Verify" means: `pnpm lint`
+clean, `pnpm test` green, `pnpm audit --audit-level high` clean, `pnpm build`
+clean, CI when PR-shaped, and a Vercel `/api/health` smoke for deploy work. Add
+a Vitest test alongside any wrapper or billing change.
 
 ---
 
@@ -244,8 +244,8 @@ CodexApp's role on this repo: build, parallelize, operate, execute.
   NOT auto-load these — open `.claude/skills/<name>/SKILL.md` (e.g.
   `credits-handler`, `inngest-handler`, `auth-handler`, `db-handler`,
   `stripe-handler`) and follow its conventions. The brief will name which one.
-- Verify before reporting done: `pnpm lint` clean + `pnpm audit --audit-level high`
-  clean + `pnpm build` clean + CI when PR-shaped + Vercel `/api/health` smoke
-  for deploy work. (No test runner yet.)
+- Verify before reporting done: `pnpm lint` clean + `pnpm test` green +
+  `pnpm audit --audit-level high` clean + `pnpm build` clean + CI when PR-shaped
+  + Vercel `/api/health` smoke for deploy work.
 - Handoff packet to `08 - CODEXAPP WORKSPACE/Project Work/Packet Registry/`
   on completion. Activity Log entry at session end (chronological, top of file).
