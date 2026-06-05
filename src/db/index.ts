@@ -1,3 +1,7 @@
 import { drizzle } from "drizzle-orm/neon-http";
 
-export const db = drizzle(process.env.DATABASE_URL!);
+const databaseUrl =
+  process.env.DATABASE_URL?.trim() ||
+  "postgresql://placeholder:placeholder@localhost:5432/placeholder";
+
+export const db = drizzle(databaseUrl);
